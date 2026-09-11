@@ -1,4 +1,4 @@
-name: Extract GameMaker Project with Script
+name: Extract GameMaker GMS2 Project
 
 on:
   workflow_dispatch:
@@ -17,10 +17,10 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
         Expand-Archive -Path "cli.zip" -DestinationPath "cli"
 
-    - name: Download Export Script
+    - name: Download GMS2 Decompiler Script
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/cubeww/UndertaleModTool-ExportToProjectScript/main/ExportToProject.csx" -OutFile "ExportToProject.csx"
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/Scripts/GameMaker%20Studio%202%20Decompiler%20Script.csx" -OutFile "GMS2Decompiler.csx"
 
     - name: Run Project Export Script
       shell: pwsh
@@ -30,8 +30,8 @@ jobs:
         $exe = (Get-ChildItem -Path "cli" -Recurse -Filter "UndertaleModCli.exe" | Select-Object -First 1).FullName
         Write-Host "Found CLI at: $exe"
         
-        Write-Host "--- RUNNING EXPORT SCRIPT ---"
-        & $exe load "data.win" -s "ExportToProject.csx" -o "output"
+        Write-Host "--- RUNNING GMS2 EXPORT SCRIPT ---"
+        & $exe load "data.win" -s "GMS2Decompiler.csx" -o "output"
         
         Write-Host "--- OUTPUT CONTENTS ---"
         dir output
