@@ -22,23 +22,18 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
         Expand-Archive -Path "cli.zip" -DestinationPath "cli"
 
-    - name: Install NAudio 2.2.1
+    - name: Install NAudio (Official Release)
       shell: pwsh
       run: |
-        # NAudio 2.x is the last version supporting .NET Standard 2.0
-        Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/NAudio/2.2.1" -OutFile "naudio.nupkg"
-        Expand-Archive -Path "naudio.nupkg" -DestinationPath "naudio"
-        # Copy the main NAudio DLL next to the CLI tool
-        Copy-Item -Path "naudio\lib\netstandard2.0\NAudio.dll" -Destination "cli\NAudio.dll" -Force
-        # Also copy NAudio.Core.dll (a common dependency)
-        if (Test-Path "naudio\lib\netstandard2.0\NAudio.Core.dll") {
-          Copy-Item -Path "naudio\lib\netstandard2.0\NAudio.Core.dll" -Destination "cli\NAudio.Core.dll" -Force
-        }
+        # Download the official release zip from GitHub
+        Invoke-WebRequest -Uri "https://github.com/naudio/NAudio/releases/download/v2.2.1/NAudio-2.2.1.zip" -OutFile "naudio.zip"
+        Expand-Archive -Path "naudio.zip" -DestinationPath "naudio_extracted"
+        # Copy ALL audio DLLs into the cli folder to satisfy dependencies
+        Get-ChildItem -Path "naudio_extracted" -Recurse -Filter "*.dll" | Copy-Item -Destination "cli" -Force
 
     - name: Download GMS2 Decompiler Script
       shell: pwsh
       run: |
-        # The script lives in a subfolder of the repo
         $scriptUrl = "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/UndertaleModTool/Decompiling_Scripts/---%20GMS2%20Decompiling%20---/Ultimate_GMS2_Decompiler_v5.csx"
         Invoke-WebRequest -Uri $scriptUrl -OutFile "GMS2Decompiler.csx"
 
@@ -56,7 +51,7 @@ jobs:
           Invoke-WebRequest -Uri "${{ github.event.inputs.data_win_url }}" -OutFile "data.win"
         }
         
-        # Add the CLI folder to the PATH so the script can find NAudio.dll
+        # Add the cli folder to the PATH so the script can find the audio DLLs
         $env:PATH = "D:\a\Coabung\Coabung\cli;$env:PATH"
         
         Write-Host "--- RUNNING GMS2 EXPORT SCRIPT ---"
