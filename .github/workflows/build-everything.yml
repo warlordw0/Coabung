@@ -22,14 +22,15 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
         Expand-Archive -Path "cli.zip" -DestinationPath "cli"
 
-    - name: Install NAudio (Official Release)
+    - name: Install NAudio via NuGet
       shell: pwsh
       run: |
-        # Download the official release zip from GitHub
-        Invoke-WebRequest -Uri "https://github.com/naudio/NAudio/releases/download/v2.2.1/NAudio-2.2.1.zip" -OutFile "naudio.zip"
-        Expand-Archive -Path "naudio.zip" -DestinationPath "naudio_extracted"
-        # Copy ALL audio DLLs into the cli folder to satisfy dependencies
-        Get-ChildItem -Path "naudio_extracted" -Recurse -Filter "*.dll" | Copy-Item -Destination "cli" -Force
+        # Download nuget.exe
+        Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "nuget.exe"
+        # Install NAudio 2.2.1 into a local folder
+        .\nuget.exe install NAudio -Version 2.2.1 -OutputDirectory "naudio_pkg" -NonInteractive
+        # Copy ALL DLLs from the package to the cli folder
+        Get-ChildItem -Path "naudio_pkg" -Recurse -Filter "*.dll" | Copy-Item -Destination "cli" -Force
 
     - name: Download GMS2 Decompiler Script
       shell: pwsh
@@ -51,7 +52,7 @@ jobs:
           Invoke-WebRequest -Uri "${{ github.event.inputs.data_win_url }}" -OutFile "data.win"
         }
         
-        # Add the cli folder to the PATH so the script can find the audio DLLs
+        # Add the cli folder to the PATH so the script can find NAudio.dll
         $env:PATH = "D:\a\Coabung\Coabung\cli;$env:PATH"
         
         Write-Host "--- RUNNING GMS2 EXPORT SCRIPT ---"
