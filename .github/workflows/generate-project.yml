@@ -14,14 +14,18 @@ jobs:
     - name: Download UndertaleModCli
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
-
-    - name: Run Decompiler
+        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "- name: Run Decompiler
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Path output
-        .\cli\UndertaleModCli.exe load data.win
-        .\cli\UndertaleModCli.exe dump --output output
+        
+        # Find the exe no matter which subfolder it's in
+        $exe = (Get-ChildItem -Path "cli" -Recurse -Filter "UndertaleModCli.exe" | Select-Object -First 1).FullName
+        Write-Host "Found executable at: $exe"
+        
+        # Run it
+        & $exe load data.win
+        & $exe dump --output output
         dir output
 
     - name: Upload Artifact
