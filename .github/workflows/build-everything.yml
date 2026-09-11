@@ -1,0 +1,47 @@
+name: Extract GameMaker Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Download UndertaleModCli
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
+        Expand-Archive -Path "cli.zip" -DestinationPath "cli"
+
+    - name: Run Decompiler (Try All Methods)
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path output
+        
+        $exe = (Get-ChildItem -Path "cli" -Recurse -Filter "UndertaleModCli.exe" | Select-Object -First 1).FullName
+        Write-Host "Found executable at: $exe"
+        
+        Write-Host "--- TRYING: info ---"
+        & $exe info "data.win"
+        
+        Write-Host "--- TRYING: dump ---"
+        & $exe dump "data.win" --output "output"
+        
+        Write-Host "--- TRYING: load --project ---"
+        & $exe load "data.win" --project "MyGame" --output "output"
+        
+        Write-Host "--- TRYING: project export ---"
+        & $exe project "data.win" --output "output"
+        
+        Write-Host "--- OUTPUT DIRECTORY CONTENTS ---"
+        dir output
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: gamemaker-project
+        path: output/
