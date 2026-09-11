@@ -20,7 +20,7 @@ jobs:
     - name: Download GMS2 Decompiler Script
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/Scripts/GameMaker%20Studio%202%20Decompiler%20Script.csx" -OutFile "GMS2Decompiler.csx"
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/UndertaleModTool/Decompiling_Scripts/---%20GMS2%20Decompiling%20---/Ultimate_GMS2_Decompiler_v5.csx" -OutFile "GMS2Decompiler.csx"
 
     - name: Run Project Export Script
       shell: pwsh
