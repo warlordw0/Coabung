@@ -17,6 +17,11 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
         Expand-Archive -Path "cli.zip" -DestinationPath "cli"
 
+    - name: Download Export Script
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/cubeww/UndertaleModTool-ExportToProjectScript/main/ExportToProject.csx" -OutFile "ExportToProject.csx"
+
     - name: Run Project Export Script
       shell: pwsh
       run: |
