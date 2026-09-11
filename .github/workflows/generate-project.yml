@@ -14,8 +14,7 @@ jobs:
     - name: Download UndertaleModCli
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/latest/download/UndertaleModCli.zip" -OutFile "cli.zip"
-        Expand-Archive -Path "cli.zip" -DestinationPath "cli"
+        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
 
     - name: Run Decompiler
       shell: pwsh
