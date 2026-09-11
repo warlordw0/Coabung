@@ -1,0 +1,42 @@
+name: Decompile GameMaker Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  decompile:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Download UndertaleModCli
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
+        Expand-Archive -Path "cli.zip" -DestinationPath "cli"
+
+    - name: Run Decompiler
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path output
+        
+        # Find the exe no matter where it unzipped to
+        $exe = (Get-ChildItem -Path "cli" -Recurse -Filter "UndertaleModCli.exe" | Select-Object -First 1).FullName
+        Write-Host "Found executable at: $exe"
+        
+        # Print the help menu so we can see the correct command
+        Write-Host "--- CLI HELP MENU ---"
+        & $exe --help
+        
+        Write-Host "--- ATTEMPTING DUMP ---"
+        & $exe "data.win" --output "output"
+        
+        dir output
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: gamemaker-project
+        path: output/
