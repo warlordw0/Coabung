@@ -1,4 +1,4 @@
-name: Extract GameMaker GMS2 Project
+name: Decompile GMS2 Project (Linux CLI)
 
 on:
   workflow_dispatch:
@@ -9,57 +9,61 @@ on:
         default: ''
 
 jobs:
-  extract:
-    runs-on: windows-latest
+  decompile:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Download UndertaleModCli
-      shell: pwsh
+    - name: Install Dependencies
       run: |
-        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
-        Expand-Archive -Path "cli.zip" -DestinationPath "cli"
+        sudo apt-get update
+        sudo apt-get install -y jq unzip wget
 
-    - name: Install NAudio via NuGet
-      shell: pwsh
+    - name: Download Linux CLI Release
       run: |
-        # Download nuget.exe
-        Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "nuget.exe"
-        # Install NAudio 2.2.1 into a local folder
-        .\nuget.exe install NAudio -Version 2.2.1 -OutputDirectory "naudio_pkg" -NonInteractive
-        # Copy ALL DLLs from the package to the cli folder
-        Get-ChildItem -Path "naudio_pkg" -Recurse -Filter "*.dll" | Copy-Item -Destination "cli" -Force
+        # Get the latest release asset URL for Linux
+        API_URL="https://api.github.com/repos/UnderminersTeam/UndertaleModTool/releases/latest"
+        ASSET_URL=$(curl -s $API_URL | jq -r '.assets[] | select(.name | contains("CLI") and (contains("Linux") or contains("Ubuntu"))) | .browser_download_url' | head -n 1)
+        
+        if [ -z "$ASSET_URL" ]; then
+          echo "No Linux CLI asset found. Trying nightly..."
+          API_URL="https://api.github.com/repos/UnderminersTeam/UndertaleModTool/releases/tags/nightly"
+          ASSET_URL=$(curl -s $API_URL | jq -r '.assets[] | select(.name | contains("CLI") and (contains("Linux") or contains("Ubuntu"))) | .browser_download_url' | head -n 1)
+        fi
+        
+        echo "Downloading from: $ASSET_URL"
+        wget "$ASSET_URL" -O cli.zip
+        unzip -o cli.zip -d cli
 
     - name: Download GMS2 Decompiler Script
-      shell: pwsh
       run: |
-        $scriptUrl = "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/UndertaleModTool/Decompiling_Scripts/---%20GMS2%20Decompiling%20---/Ultimate_GMS2_Decompiler_v5.csx"
-        Invoke-WebRequest -Uri $scriptUrl -OutFile "GMS2Decompiler.csx"
+        wget "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/UndertaleModTool/Decompiling_Scripts/---%20GMS2%20Decompiling%20---/Ultimate_GMS2_Decompiler_v5.csx" -O GMS2Decompiler.csx
 
-    - name: Run Project Export Script
-      shell: pwsh
+    - name: Run Decompiler
       run: |
-        New-Item -ItemType Directory -Path output -Force
-        
-        $exe = (Get-ChildItem -Path "cli" -Recurse -Filter "UndertaleModCli.exe" | Select-Object -First 1).FullName
-        Write-Host "Found CLI at: $exe"
+        mkdir -p output
         
         # If a URL was provided, download that data.win instead
-        if ("${{ github.event.inputs.data_win_url }}" -ne "") {
-          Write-Host "Downloading data.win from provided URL..."
-          Invoke-WebRequest -Uri "${{ github.event.inputs.data_win_url }}" -OutFile "data.win"
-        }
+        if [ -n "${{ github.event.inputs.data_win_url }}" ]; then
+          wget "${{ github.event.inputs.data_win_url }}" -O data.win
+        fi
         
-        # Add the cli folder to the PATH so the script can find NAudio.dll
-        $env:PATH = "D:\a\Coabung\Coabung\cli;$env:PATH"
+        # Find the CLI executable
+        CLI_EXE=$(find cli -type f -name "UndertaleModCli" | head -n 1)
+        if [ -z "$CLI_EXE" ]; then
+          CLI_EXE=$(find cli -type f -name "*.dll" | head -n 1)
+          echo "Found DLL, trying dotnet..."
+          dotnet "$CLI_EXE" load "data.win" -s "GMS2Decompiler.csx" -o "output"
+        else
+          echo "Found CLI at: $CLI_EXE"
+          chmod +x "$CLI_EXE"
+          "$CLI_EXE" load "data.win" -s "GMS2Decompiler.csx" -o "output"
+        fi
         
-        Write-Host "--- RUNNING GMS2 EXPORT SCRIPT ---"
-        & $exe load "data.win" -s "GMS2Decompiler.csx" -o "output"
-        
-        Write-Host "--- OUTPUT CONTENTS ---"
-        dir output
+        echo "--- OUTPUT CONTENTS ---"
+        ls -la output
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
