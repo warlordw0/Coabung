@@ -1,0 +1,32 @@
+name: Generate GameMaker Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Download UndertaleModCli
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/latest/download/UndertaleModCli.zip" -OutFile "cli.zip"
+        Expand-Archive -Path "cli.zip" -DestinationPath "cli"
+
+    - name: Run Decompiler
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path output
+        .\cli\UndertaleModCli.exe load data.win
+        .\cli\UndertaleModCli.exe dump --output output
+        dir output
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: gamemaker-project
+        path: output/
