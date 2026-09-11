@@ -2,6 +2,11 @@ name: Extract GameMaker GMS2 Project
 
 on:
   workflow_dispatch:
+    inputs:
+      data_win_url:
+        description: 'URL to download data.win (leave empty to use the one in the repo)'
+        required: false
+        default: ''
 
 jobs:
   extract:
@@ -17,18 +22,42 @@ jobs:
         Invoke-WebRequest -Uri "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/nightly/CLI-windows-latest-Debug-isBundled-true.zip" -OutFile "cli.zip"
         Expand-Archive -Path "cli.zip" -DestinationPath "cli"
 
+    - name: Install NAudio 2.2.1
+      shell: pwsh
+      run: |
+        # NAudio 2.x is the last version supporting .NET Standard 2.0
+        Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/NAudio/2.2.1" -OutFile "naudio.nupkg"
+        Expand-Archive -Path "naudio.nupkg" -DestinationPath "naudio"
+        # Copy the main NAudio DLL next to the CLI tool
+        Copy-Item -Path "naudio\lib\netstandard2.0\NAudio.dll" -Destination "cli\NAudio.dll" -Force
+        # Also copy NAudio.Core.dll (a common dependency)
+        if (Test-Path "naudio\lib\netstandard2.0\NAudio.Core.dll") {
+          Copy-Item -Path "naudio\lib\netstandard2.0\NAudio.Core.dll" -Destination "cli\NAudio.Core.dll" -Force
+        }
+
     - name: Download GMS2 Decompiler Script
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/UndertaleModTool/Decompiling_Scripts/---%20GMS2%20Decompiling%20---/Ultimate_GMS2_Decompiler_v5.csx" -OutFile "GMS2Decompiler.csx"
+        # The script lives in a subfolder of the repo
+        $scriptUrl = "https://raw.githubusercontent.com/burnedpopcorn/UnderAnalyzer-Decompiler/main/UndertaleModTool/Decompiling_Scripts/---%20GMS2%20Decompiling%20---/Ultimate_GMS2_Decompiler_v5.csx"
+        Invoke-WebRequest -Uri $scriptUrl -OutFile "GMS2Decompiler.csx"
 
     - name: Run Project Export Script
       shell: pwsh
       run: |
-        New-Item -ItemType Directory -Path output
+        New-Item -ItemType Directory -Path output -Force
         
         $exe = (Get-ChildItem -Path "cli" -Recurse -Filter "UndertaleModCli.exe" | Select-Object -First 1).FullName
         Write-Host "Found CLI at: $exe"
+        
+        # If a URL was provided, download that data.win instead
+        if ("${{ github.event.inputs.data_win_url }}" -ne "") {
+          Write-Host "Downloading data.win from provided URL..."
+          Invoke-WebRequest -Uri "${{ github.event.inputs.data_win_url }}" -OutFile "data.win"
+        }
+        
+        # Add the CLI folder to the PATH so the script can find NAudio.dll
+        $env:PATH = "D:\a\Coabung\Coabung\cli;$env:PATH"
         
         Write-Host "--- RUNNING GMS2 EXPORT SCRIPT ---"
         & $exe load "data.win" -s "GMS2Decompiler.csx" -o "output"
